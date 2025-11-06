@@ -1,152 +1,209 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <title>MERNa Web</title>
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Dice Roller - Client</title>
 	<style>
-		#urlInput {
-            width: 500px; 
-            padding: 10px;
-            font-size: 14px;
-        }
-        #favoritePlacesJSON, #batmanJSON {
-            padding: 20px;
-            background-color: lightgray;
-            margin-top: 20px;
-        }
-		#testingDiv {
-            display: none;
-        }
-    </style>
+		body {
+			font-family: Arial, sans-serif;
+			max-width: 600px;
+			margin: 50px auto;
+			padding: 20px;
+			background-color: #f0f0f0;
+		}
+
+		.container {
+			background-color: white;
+			padding: 30px;
+			border-radius: 10px;
+			box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+		}
+
+		h1 {
+			color: #333;
+			text-align: center;
+		}
+
+		.server-config {
+			margin: 20px 0;
+			padding: 15px;
+			background-color: #f9f9f9;
+			border-radius: 5px;
+		}
+
+		label {
+			display: block;
+			margin-bottom: 5px;
+			font-weight: bold;
+		}
+
+		input[type="text"] {
+			width: 100%;
+			padding: 8px;
+			margin-bottom: 10px;
+			border: 1px solid #ddd;
+			border-radius: 4px;
+			box-sizing: border-box;
+		}
+
+		button {
+			background-color: #4CAF50;
+			color: white;
+			padding: 12px 24px;
+			border: none;
+			border-radius: 4px;
+			cursor: pointer;
+			font-size: 16px;
+			margin: 5px;
+		}
+
+		button:hover {
+			background-color: #45a049;
+		}
+
+		button:disabled {
+			background-color: #cccccc;
+			cursor: not-allowed;
+		}
+
+		.dice-controls {
+			text-align: center;
+			margin: 20px 0;
+		}
+
+		.result {
+			margin-top: 20px;
+			padding: 20px;
+			background-color: #e8f5e9;
+			border-radius: 5px;
+			text-align: center;
+		}
+
+		.result h2 {
+			margin: 0 0 10px 0;
+			color: #2e7d32;
+		}
+
+		.dice-display {
+			font-size: 48px;
+			margin: 10px 0;
+		}
+
+		.error {
+			color: #d32f2f;
+			background-color: #ffebee;
+			padding: 10px;
+			border-radius: 4px;
+			margin-top: 10px;
+		}
+
+		.success {
+			color: #388e3c;
+			background-color: #e8f5e9;
+			padding: 10px;
+			border-radius: 4px;
+			margin-top: 10px;
+		}
+	</style>
 </head>
+
 <body>
-	<h1>MERNa Web Application</h1>
-	<p>This is an HTML, CSS, and JavaScript MERNa web client. To test your MERNa server, enter your 
-	MERNa sever URL below and press test connection button.</p>
+	<div class="container">
+		<h1>🎲 Dice Roller 🎲</h1>
 
-	<label for="urlInput">MERNa Server URL:</label><br />
-	<input type="text" id="urlInput" placeholder="Enter the URL of your remote MERNa server here..."><br /><br />
+		<div class="server-config">
+			<label for="serverUrl">Server URL:</label>
+			<input type="text" id="serverUrl"
+				placeholder="Enter your Node.js server URL (e.g., https://your-server.azurewebsites.net)" value="">
+			<button onclick="testConnection()">Test Server Connection</button>
+			<div id="connectionStatus"></div>
+		</div>
 
-	<button onclick="testMERNaServerConnection()">Test MERNa Server Connection</button>
-	<div id="ping"></div><br /><br />
+		<div class="dice-controls">
+			<h3>Roll the Dice!</h3>
+			<button onclick="rollDice(1)">Roll 1 Die 🎲</button>
+			<button onclick="rollDice(2)">Roll 2 Dice 🎲🎲</button>
+			<button onclick="rollDice(3)">Roll 3 Dice 🎲🎲🎲</button>
+		</div>
+
+		<div id="result" style="display: none;" class="result">
+			<h2>Result:</h2>
+			<div id="diceDisplay" class="dice-display"></div>
+			<div id="total"></div>
+		</div>
+	</div>
 
 	<script>
-		async function testMERNaServerConnection() {
-			const pingField = document.getElementById("ping");
-			pingField.innerHTML = "";
-			var div = document.getElementById('testingDiv');
-			div.style.display = 'none';
+		// Get the dice emoji for a number
+		function getDiceEmoji(num) {
+			const diceEmojis = ['⚀', '⚁', '⚂', '⚃', '⚄', '⚅'];
+			return diceEmojis[num - 1] || '🎲';
+		}
 
-			const url = document.getElementById("urlInput").value + "/api/ping";
-			const response = await fetch(url);
-			const pingResponse = await response.text();
+		// Test server connection
+		async function testConnection() {
+			const serverUrl = document.getElementById('serverUrl').value.trim();
+			const statusDiv = document.getElementById('connectionStatus');
 
-			if (pingResponse === 'ping response') {
-				pingField.innerHTML = "Success!";
-				var div = document.getElementById('testingDiv');
-				div.style.display = 'block';
-			} 
+			if (!serverUrl) {
+				statusDiv.innerHTML = '<div class="error">Please enter a server URL</div>';
+				return;
+			}
+
+			try {
+				statusDiv.innerHTML = '<div>Testing connection...</div>';
+				const response = await fetch(`${serverUrl}`);
+
+				if (response.ok) {
+					const result = await response.text();
+					statusDiv.innerHTML = `<div class="success">✓ Connected! Server returned: ${result}</div>`;
+				} else {
+					statusDiv.innerHTML = `<div class="error">✗ Server responded with status: ${response.status}</div>`;
+				}
+			} catch (error) {
+				statusDiv.innerHTML = `<div class="error">✗ Connection failed: ${error.message}</div>`;
+			}
+		}
+
+		// Roll dice
+		async function rollDice(numDice) {
+			const serverUrl = document.getElementById('serverUrl').value.trim();
+			const resultDiv = document.getElementById('result');
+			const diceDisplay = document.getElementById('diceDisplay');
+			const totalDiv = document.getElementById('total');
+
+			if (!serverUrl) {
+				alert('Please enter a server URL first!');
+				return;
+			}
+
+			try {
+				// Call server API for each die
+				const rolls = [];
+				for (let i = 0; i < numDice; i++) {
+					const response = await fetch(`${serverUrl}`);
+					if (!response.ok) {
+						throw new Error(`Server error: ${response.status}`);
+					}
+					const result = await response.text();
+					rolls.push(parseInt(result));
+				}
+
+				// Display results
+				const diceEmojis = rolls.map(roll => getDiceEmoji(roll)).join(' ');
+				const total = rolls.reduce((sum, roll) => sum + roll, 0);
+
+				diceDisplay.textContent = diceEmojis;
+				totalDiv.innerHTML = `<strong>Rolls:</strong> ${rolls.join(', ')} | <strong>Total:</strong> ${total}`;
+				resultDiv.style.display = 'block';
+
+			} catch (error) {
+				alert(`Error rolling dice: ${error.message}\n\nMake sure your server is running and the URL is correct.`);
+			}
 		}
 	</script>
-
-	<div id="testingDiv">
-		<button type="button" onclick="fetchAbout()">Fetch About</button>
-		<div id="fetch-about-result"></div>
-		<br><br>
-
-		<button type="button" onclick="fetch2Plus2()">Fetch 2plus2</button>
-		<div id="fetch-2plus2-result"></div>
-		<br><br>
-
-		Add two integers on the Node.js server.<br />
-		<select onchange="addTwoIntegers()" id="x-value">
-			<option>1</option>
-			<option>2</option>
-			<option>3</option>
-			<option>100</option>
-		</select> +
-
-		<select onchange="addTwoIntegers()" id="y-value">
-			<option>1</option>
-			<option>2</option>
-			<option>3</option>
-			<option>100</option>
-		</select> = 
-		<input id="sum" disabled></input><br /><br /><br />
-
-		<button type="button" onclick="calculateBMI()">Calculate BMI</button>
-		<div id="bmi-result"></div>
-		<br><br>
-
-		<script>
-			let fetchAboutCounter = 0
-			async function fetchAbout() {
-				fetchAboutCounter++
-				const url = document.getElementById("urlInput").value + "/about";
-				const response = await fetch(url)
-				const responseText = await response.text()
-				document.getElementById("fetch-about-result").innerHTML = responseText + " ("+fetchAboutCounter+")"
-			}
-
-			let fetch2plus2Counter = 0
-			async function fetch2Plus2() {
-				fetch2plus2Counter++
-				const url = document.getElementById("urlInput").value + "/2plus2";
-				const response = await fetch(url)
-				const responseText = await response.text()
-				document.getElementById("fetch-2plus2-result").innerHTML = responseText + " ("+fetch2plus2Counter+")"
-			}
-
-			async function addTwoIntegers() {
-				const x = document.getElementById("x-value").value
-				const y = document.getElementById("y-value").value
-
-				// Note the URL (fetch) string will look something like '/add-two-integers?x=2&y=1' when it is sent.
-				const url = document.getElementById("urlInput").value
-				const fetchString = url+"/add-two-integers?x="+x+"&y="+y
-				const response = await fetch(fetchString)
-				const responseText = await response.text()
-				document.getElementById("sum").value = responseText
-			}
-
-			async function calculateBMI() {
-				// Approximate height and weight for a man in the US. 
-				const url = document.getElementById("urlInput").value;
-				const fetchString = url+'/calculate-bmi?feet=5&inches=10&lbs=186';
-				const response = await fetch(fetchString)
-				const responseText = await response.text()
-				console.log(responseText)
-				document.getElementById("bmi-result").innerHTML = responseText
-			}
-		</script>
-
-		<button onclick="fetchBatman()">Batman</button>
-		<div id="batmanJSON">Batman JSON</div><br /><br />
-		<script>
-			async function fetchBatman() {
-				const url = document.getElementById("urlInput").value + "/batman";
-				const response = await fetch(url);
-				const batmanResponse = await response.json();
-
-				const batmanJSONField = document.getElementById("batmanJSON");
-				const batmanResponseText = "<pre>"+JSON.stringify(batmanResponse, null, 4)+"</pre"
-				batmanJSONField.innerHTML = batmanResponseText
-			}
-		</script>
-
-		<button onclick="testFavoritePlaces()">Favorite Places</button>
-		<div id="favoritePlacesJSON">Favorite Places JSON</div><br /><br />
-		<script>
-			async function testFavoritePlaces() {
-				const url = document.getElementById("urlInput").value + "/api/favorite-places";
-				const response = await fetch(url);
-				const places = await response.json();
-
-				const favoritePlacesJSONField = document.getElementById("favoritePlacesJSON");
-				const favoritePlacesText = "<pre>"+JSON.stringify(places, null, 4)+"</pre"
-				favoritePlacesJSONField.innerHTML = favoritePlacesText
-			}
-		</script>
-	</div>
 </body>
+
 </html>
